@@ -66,8 +66,8 @@ internal class NativeTaskCoordinator(
             val supportsProcessing = identifier == BGTaskIdentifiers.PROCESSING
             val eligibleTasks = database.taskSpecQueries.selectNextEligibleTasks(
                 currentTimeMs = Timestamp.now(),
-                supportsNetwork = supportsProcessing,
-                supportsCharging = supportsProcessing,
+                supportsNetwork = if (supportsProcessing) 1L else 0L,
+                supportsCharging = if (supportsProcessing) 1L else 0L,
                 limit = Long.MAX_VALUE
             ).executeAsList()
 
@@ -123,10 +123,18 @@ internal class NativeTaskCoordinator(
         // Determine the requirements for the remaining tasks
         var needsProcessing = false
         var needsRefresh = false
+        var processingRequiresNetwork = false
+        var processingRequiresCharging = false
 
         for (task in remainingTasks) {
             if (task.requires_network || task.requires_charging) {
                 needsProcessing = true
+                if (task.requires_network) {
+                    processingRequiresNetwork = true
+                }
+                if (task.requires_charging) {
+                    processingRequiresCharging = true
+                }
             } else {
                 needsRefresh = true
             }
@@ -143,8 +151,10 @@ internal class NativeTaskCoordinator(
         val immediateSchedule = TaskSchedule.OneTime(0.seconds)
 
         if (needsProcessing) {
-            // Use broad constraints to ensure the OS considers the request if any processing task is pending
-            val processingPreconditions = TaskPreconditions(requiresNetwork = true, requiresCharging = true)
+            val processingPreconditions = TaskPreconditions(
+                requiresNetwork = processingRequiresNetwork,
+                requiresCharging = processingRequiresCharging,
+            )
             val request = scheduler.createBGTaskRequest(processingPreconditions, immediateSchedule)
             scheduler.submitRequest(request)
         }

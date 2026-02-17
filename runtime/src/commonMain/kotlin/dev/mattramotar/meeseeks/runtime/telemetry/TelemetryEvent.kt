@@ -3,18 +3,17 @@ package dev.mattramotar.meeseeks.runtime.telemetry
 import dev.mattramotar.meeseeks.runtime.TaskId
 import dev.mattramotar.meeseeks.runtime.TaskRequest
 import dev.mattramotar.meeseeks.runtime.internal.Timestamp
-import dev.mattramotar.meeseeks.runtime.internal.db.model.BackoffPolicy
 import dev.mattramotar.meeseeks.runtime.types.RetryErrorCategory
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-sealed class TelemetryEvent {
+public sealed class TelemetryEvent {
 
-    abstract fun structured(): String
+    public abstract fun structured(): String
 
-    data class TaskScheduled(
-        val taskId: TaskId,
-        val task: TaskRequest
+    public data class TaskScheduled(
+        public val taskId: TaskId,
+        public val task: TaskRequest
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -30,10 +29,10 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskStarted(
-        val taskId: TaskId,
-        val task: TaskRequest,
-        val runAttemptCount: Int = 1,
+    public data class TaskStarted(
+        public val taskId: TaskId,
+        public val task: TaskRequest,
+        public val runAttemptCount: Int = 1,
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -50,10 +49,10 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskSucceeded(
-        val taskId: TaskId,
-        val task: TaskRequest,
-        val runAttemptCount: Int = 1,
+    public data class TaskSucceeded(
+        public val taskId: TaskId,
+        public val task: TaskRequest,
+        public val runAttemptCount: Int = 1,
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -68,11 +67,11 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskFailed(
-        val taskId: TaskId,
-        val task: TaskRequest,
-        val error: Throwable?,
-        val runAttemptCount: Int = 1,
+    public data class TaskFailed(
+        public val taskId: TaskId,
+        public val task: TaskRequest,
+        public val error: Throwable?,
+        public val runAttemptCount: Int = 1,
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -88,10 +87,10 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskCancelled(
-        val taskId: TaskId,
-        val task: TaskRequest,
-        val runAttemptCount: Int = 1,
+    public data class TaskCancelled(
+        public val taskId: TaskId,
+        public val task: TaskRequest,
+        public val runAttemptCount: Int = 1,
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -108,11 +107,11 @@ sealed class TelemetryEvent {
     /**
      * Emitted when a platform task submission fails.
      */
-    data class TaskSubmitFailed(
-        val taskIdentifier: String,
-        val errorCode: Int,
-        val errorDescription: String?,
-        val isRetriable: Boolean
+    public data class TaskSubmitFailed(
+        public val taskIdentifier: String,
+        public val errorCode: Int,
+        public val errorDescription: String?,
+        public val isRetriable: Boolean
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -133,15 +132,15 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskRetryScheduled(
-        val taskId: TaskId,
-        val task: TaskRequest,
-        val attemptCount: Int,
-        val nextRetryDelayMs: Long,
-        val remainingRetries: Int,
-        val errorCategory: RetryErrorCategory? = null,
-        val errorMessage: String? = null,
-        val backoffPolicy: BackoffPolicy? = null
+    public data class TaskRetryScheduled(
+        public val taskId: TaskId,
+        public val task: TaskRequest,
+        public val attemptCount: Int,
+        public val nextRetryDelayMs: Long,
+        public val remainingRetries: Int,
+        public val errorCategory: RetryErrorCategory? = null,
+        public val errorMessage: String? = null,
+        public val backoffPolicy: String? = null
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(
@@ -154,7 +153,7 @@ sealed class TelemetryEvent {
                 "nextRetryDelayMs" to nextRetryDelayMs,
                 "errorCategory" to errorCategory?.name,
                 "errorMessage" to errorMessage,
-                "backoffPolicy" to backoffPolicy?.name,
+                "backoffPolicy" to backoffPolicy,
                 "priority" to task.priority.name,
                 "requiresNetwork" to task.preconditions.requiresNetwork,
                 "requiresCharging" to task.preconditions.requiresCharging
@@ -163,15 +162,15 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskRetryDecision(
-        val taskId: TaskId,
-        val decision: RetryDecision,
-        val attemptCount: Int,
-        val maxRetries: Int,
-        val errorCategory: RetryErrorCategory,
-        val reason: String
+    public data class TaskRetryDecision(
+        public val taskId: TaskId,
+        public val decision: RetryDecision,
+        public val attemptCount: Int,
+        public val maxRetries: Int,
+        public val errorCategory: RetryErrorCategory,
+        public val reason: String
     ) : TelemetryEvent() {
-        enum class RetryDecision {
+        public enum class RetryDecision {
             RETRY_SCHEDULED,
             MAX_RETRIES_EXCEEDED,
             PERMANENT_FAILURE,
@@ -194,15 +193,15 @@ sealed class TelemetryEvent {
         }
     }
 
-    data class TaskStatistics(
-        val taskId: TaskId,
-        val totalAttempts: Int,
-        val successfulAttempts: Int,
-        val failedAttempts: Int,
-        val transientFailures: Int,
-        val permanentFailures: Int,
-        val averageRetryDelayMs: Long,
-        val errorCategoryCounts: Map<String, Int>
+    public data class TaskStatistics(
+        public val taskId: TaskId,
+        public val totalAttempts: Int,
+        public val successfulAttempts: Int,
+        public val failedAttempts: Int,
+        public val transientFailures: Int,
+        public val permanentFailures: Int,
+        public val averageRetryDelayMs: Long,
+        public val errorCategoryCounts: Map<String, Int>
     ) : TelemetryEvent() {
         override fun structured(): String {
             return Json.encodeToString(
@@ -228,8 +227,8 @@ sealed class TelemetryEvent {
     /**
      * Emitted when the orphaned task watchdog recovers tasks that were left in enqueued state but not scheduled with the platform.
      */
-    data class OrphanedTasksRecovered(
-        val count: Int
+    public data class OrphanedTasksRecovered(
+        public val count: Int
     ) : TelemetryEvent() {
         override fun structured(): String {
             val log = mapOf(

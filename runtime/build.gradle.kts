@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.maven.publish)
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.binary.compatibility.validator)
 }
 
 android {
@@ -21,6 +22,8 @@ android {
 }
 
 kotlin {
+    explicitApi()
+
     sourceSets {
         commonMain {
             dependencies {
@@ -36,6 +39,7 @@ kotlin {
         commonTest {
             dependencies {
                 implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -67,6 +71,13 @@ kotlin {
                 implementation(libs.web.worker.driver)
             }
         }
+    }
+}
+
+apiValidation {
+    @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
+    klib {
+        enabled = true
     }
 }
 

@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'matt-ramotar/meeseeks' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    environment: release
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@d9c87d481d55275bb5441eef3fe0e46805f9ef70
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@ac2d340dc04d9e1113182899e983b5400c17cda1
+
+      - name: Grant execute permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Warning hygiene gate
+        run: bash scripts/ci/check-warning-hygiene.sh
+
+      - name: Retrieve Version
+        run: |
+          echo "VERSION_NAME=$(grep -w 'VERSION_NAME' gradle.properties | cut -d'=' -f2)" >> $GITHUB_ENV
+
+      - name: Guard release to non-SNAPSHOT only
+        run: |
+          if [[ "${VERSION_NAME}" == *-SNAPSHOT ]]; then
+            echo "Refusing release workflow for SNAPSHOT versions."
+            echo "Use CI snapshot publish on main for SNAPSHOTs."
+            exit 1
+          fi
+
+      - name: Verification gate
+        run: ./gradlew preflight clean build :runtime:jvmApiCheck :runtime:klibApiCheck :runtime:verifyCommonMainMeeseeksDatabaseMigration --stacktrace --warning-mode fail
+
+      - name: Publish and Release to Maven Central (Central Portal)
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew publishAndReleaseToMavenCentral
